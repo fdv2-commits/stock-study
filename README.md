@@ -33,6 +33,9 @@ cd C:\stock_study
 | ❌ 오답 노트 | 틀린 문제 모음. 같은 문제를 2번 연속 맞히면 빠짐 (횟수는 config.py) |
 | 📊 기록 | 전체·분류별 정답률, 최근 퀴즈 기록 |
 
+## 휴대폰에서 쓰기
+Streamlit Cloud에 배포하는 방법은 [DEPLOY.md](DEPLOY.md)를 보세요.
+
 ## 문제·개념 직접 추가하기
 - 개념 카드: `content/concepts.json`
 - 퀴즈 문제: `content/questions.json`
@@ -62,6 +65,7 @@ cd C:\stock_study
 ## 학습 기록
 - `progress.json`에 저장됩니다 (내 컴퓨터에만, git에 올라가지 않음).
 - 처음부터 다시 하고 싶으면 이 파일을 지우면 됩니다.
+- 배포한 앱에서는 GitHub 데이터 저장소의 `stock_study/progress.json`에 보관됩니다.
 
 ## 폴더 구조
 ```
@@ -71,5 +75,6 @@ content/          개념 카드·문제 은행 (JSON)
 quiz/bank.py      파일 불러오기·형식 검사
 quiz/engine.py    출제(보기 섞기)·채점
 quiz/progress.py  학습 기록·오답 노트
+storage/          비밀값 읽기·배포용 GitHub 보관
 tests/            pytest 테스트
 ```

@@ -31,6 +31,7 @@
 - config.py: 모든 기준값과 기본 설정
 - content/: 개념 카드(concepts.json)와 퀴즈 문제 은행(questions.json)
 - quiz/: 문제 불러오기·검사, 퀴즈 출제·채점, 학습 기록 저장
+- storage/: 비밀값 읽기, 배포용 GitHub 보관 (학습 기록을 swing-data 저장소의 stock_study/ 폴더에 보관)
 - tests/: pytest 테스트
 
 ## 코딩 원칙
@@ -39,6 +40,10 @@
 - 문제 은행은 테스트로 형식(보기 수, 정답 번호, 해설, id 중복 등)을 검사한다.
 - 휴대폰 위주로 사용한다. 모바일 화면 기준으로 세로로 쌓이게 배치하고, PC에서도 깨지지 않게 한다.
 - 다크 모드를 기본으로 한다. (.streamlit/config.toml 테마, 차트도 어두운 테마)
+
+## 배포
+- Streamlit Community Cloud (휴대폰 접속용). 안내는 DEPLOY.md.
+- 코드 변경은 git push 해야 배포 앱에 반영된다. push 전에는 물어본다.
 
 ## 진행 방식
 - 단계별 요청을 받으면 먼저 계획을 짧게 보여주고 진행한다.

@@ -50,6 +50,16 @@ RECENT_SESSIONS_SHOWN = 10
 ACCURACY_GOOD = 80
 ACCURACY_OK = 60
 
+# ── 배포용 GitHub 보관 (학습 기록) ─────────────────────
+# Streamlit Cloud는 재시작하면 폴더의 파일이 사라지므로 학습 기록을 비공개 GitHub 저장소에 보관한다.
+# 토큰·저장소 이름은 st.secrets(배포) 또는 .env(로컬)의 GITHUB_DATA_TOKEN / GITHUB_DATA_REPO.
+# 둘 다 없으면 보관 기능은 꺼지고 내 PC의 progress.json만 쓴다.
+REMOTE_DIR = "stock_study"          # 데이터 저장소 안의 폴더 이름 (스윙 대시보드 파일과 섞이지 않게)
+REMOTE_DEFAULT_BRANCH = "main"
+REMOTE_COMMIT_PREFIX = "[주식공부]"
+REMOTE_PUSH_EVERY = 5               # 퀴즈 도중에는 이 문제 수마다 올림 (끝나거나 그만둘 때도 올림)
+HTTP_TIMEOUT = 15                   # 인터넷 요청 제한 시간(초)
+
 # ── 차트 ─────────────────────────────────────────────
 CHART_TEMPLATE = "plotly_dark"
 COLOR_GOOD = "#22c55e"   # 초록

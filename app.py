@@ -6,10 +6,36 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+import hmac
+
 import config
 from quiz import bank, engine, progress as prog
+from storage import remote
+from storage.keys import get_secret
 
 st.set_page_config(page_title="주식 공부", page_icon="📚", layout="centered")
+st.title(config.APP_TITLE)
+
+
+def password_gate() -> None:
+    """APP_PASSWORD가 설정돼 있으면 비밀번호를 맞혀야 화면이 열린다 (설정 안 하면 그냥 통과).
+
+    배포한 앱 주소를 다른 사람이 알더라도 학습 기록을 보거나 바꾸지 못하게 잠그는 용도.
+    """
+    pw = get_secret("APP_PASSWORD")
+    if not pw or st.session_state.get("_auth_ok"):
+        return
+    entered = st.text_input("🔒 비밀번호", type="password")
+    if entered and hmac.compare_digest(entered.encode(), pw.encode()):
+        st.session_state["_auth_ok"] = True
+        st.rerun()
+    if entered:
+        st.error("비밀번호가 틀렸습니다.")
+    st.caption(f"⚠️ {config.DISCLAIMER}")
+    st.stop()
+
+
+password_gate()
 
 # 색 등급 → 실제 색·이름
 LEVEL_COLOR = {"good": config.COLOR_GOOD, "ok": config.COLOR_OK, "bad": config.COLOR_BAD}
@@ -39,7 +65,6 @@ def _mtime(path) -> float:
 try:
     CONCEPTS, QUESTIONS = load_content(_mtime(config.CONCEPTS_FILE), _mtime(config.QUESTIONS_FILE))
 except bank.BankError as e:
-    st.title(config.APP_TITLE)
     st.error(str(e))
     st.info("content 폴더의 JSON 파일을 고친 뒤 새로고침하세요.")
     st.stop()
@@ -49,24 +74,40 @@ QUESTION_BY_ID = {q["id"]: q for q in QUESTIONS}
 
 # 학습 기록은 처음 한 번만 파일에서 읽고, 이후엔 session_state에서 고쳐 가며 저장한다
 if "progress" not in st.session_state:
+    # 배포 환경이면 GitHub에 보관된 최신 기록을 먼저 내려받는다 (꺼져 있으면 아무 일도 안 함)
+    remote.safe_pull(config.PROGRESS_FILE)
     data, warning = prog.load_progress()
     st.session_state.progress = data
     st.session_state.progress_warning = warning
+    st.session_state.unsynced = 0          # 아직 GitHub에 올리지 않은 풀이 수
 PROGRESS = st.session_state.progress
 
 
+def sync(message: str = "학습 기록 저장"):
+    """GitHub 보관이 켜져 있으면 지금 기록을 올린다."""
+    if remote.enabled() and st.session_state.unsynced:
+        remote.safe_push(config.PROGRESS_FILE, message)
+        if remote.last_error is None:
+            st.session_state.unsynced = 0
+
+
 def save():
-    """학습 기록 저장. 실패하면 경고를 띄운다."""
+    """학습 기록을 이 컴퓨터(서버)에 저장하고, 몇 문제마다 GitHub에도 올린다."""
     warning = prog.save_progress(PROGRESS)
     if warning:
         st.session_state.progress_warning = warning
+        return
+    st.session_state.unsynced += 1
+    if st.session_state.unsynced >= config.REMOTE_PUSH_EVERY:
+        sync()
 
 
 # ── 화면 머리 ─────────────────────────────────────────
-st.title(config.APP_TITLE)
 st.caption(f"⚠️ {config.DISCLAIMER}")
 if st.session_state.get("progress_warning"):
     st.warning(st.session_state.progress_warning)
+if remote.last_error:
+    st.warning(f"학습 기록 GitHub 보관 실패 (이 기기에는 저장됨): {remote.last_error}")
 
 tab_concept, tab_quiz, tab_wrong, tab_stats = st.tabs(["📖 개념", "📝 퀴즈", "❌ 오답 노트", "📊 기록"])
 
@@ -151,8 +192,9 @@ def next_question():
 
 
 def quit_quiz():
-    """퀴즈 그만두기 / 새 퀴즈."""
+    """퀴즈 그만두기 / 새 퀴즈. 남은 기록을 GitHub에 올린다."""
     st.session_state.quiz = None
+    sync("퀴즈 중단")
 
 
 with tab_quiz:
@@ -241,6 +283,7 @@ with tab_quiz:
         if not st.session_state.quiz_saved:
             prog.record_session(PROGRESS, st.session_state.quiz_label, total, correct)
             save()
+            sync(f"퀴즈 완료 {correct}/{total}")
             st.session_state.quiz_saved = True
         level = prog.accuracy_level(rate)
         st.markdown(f"### {LEVEL_EMOJI[level]} {correct} / {total} 맞힘 ({rate:.0f}%)")
