@@ -13,3 +13,6 @@ progress.json
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# 개인용 Claude 설정 (공개 저장소에 올리지 않음)
+CLAUDE.local.md
