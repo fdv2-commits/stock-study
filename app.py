@@ -1,4 +1,4 @@
-"""주식 공부 프로그램 화면 (1단계: 개념 카드 + 퀴즈 + 오답 노트 + 학습 기록).
+"""주식 공부 프로그램 화면 (개념 카드 + 퀴즈 + 오답 노트 + 차트 복기 + 학습 기록).
 
 실행: .venv\\Scripts\\streamlit run app.py
 """
@@ -12,6 +12,7 @@ import config
 from quiz import bank, engine, progress as prog
 from storage import remote
 from storage.keys import get_secret
+import ui_replay
 
 st.set_page_config(page_title="주식 공부", page_icon="📚", layout="centered")
 st.title(config.APP_TITLE)
@@ -55,7 +56,26 @@ def load_content(concepts_mtime: float, questions_mtime: float):
     """
     concepts = bank.load_concepts()
     questions = bank.load_questions(concept_ids={c["id"] for c in concepts})
-    return concepts, questions
+    return [_md_safe(c) for c in concepts], [_md_safe(q) for q in questions]
+
+
+def _md_safe(item: dict) -> dict:
+    """화면 글자에서 물결표(~)를 그대로 보이게 바꾼다.
+
+    Streamlit은 '09:00~15:30 ... 09:30~16:00'처럼 ~가 두 번 나오면 그 사이를 취소선으로 그리기 때문.
+    """
+    keep = {"id", "category", "concept", "level", "answer"}
+    out = {}
+    for key, value in item.items():
+        if key in keep:
+            out[key] = value
+        elif isinstance(value, str):
+            out[key] = value.replace("~", r"\~")
+        elif isinstance(value, list):
+            out[key] = [v.replace("~", r"\~") if isinstance(v, str) else v for v in value]
+        else:
+            out[key] = value
+    return out
 
 
 def _mtime(path) -> float:
@@ -109,7 +129,8 @@ if st.session_state.get("progress_warning"):
 if remote.last_error:
     st.warning(f"학습 기록 GitHub 보관 실패 (이 기기에는 저장됨): {remote.last_error}")
 
-tab_concept, tab_quiz, tab_wrong, tab_stats = st.tabs(["📖 개념", "📝 퀴즈", "❌ 오답 노트", "📊 기록"])
+tab_concept, tab_quiz, tab_wrong, tab_replay, tab_stats = st.tabs(
+    ["📖 개념", "📝 퀴즈", "❌ 오답", "🕯️ 복기", "📊 기록"])
 
 
 # ── 1) 개념 카드 ──────────────────────────────────────
@@ -327,7 +348,12 @@ with tab_wrong:
             )
 
 
-# ── 4) 학습 기록 ─────────────────────────────────────
+# ── 4) 차트 복기 ─────────────────────────────────────
+with tab_replay:
+    ui_replay.render(PROGRESS, save, sync)
+
+
+# ── 5) 학습 기록 ─────────────────────────────────────
 with tab_stats:
     # 기록이 어디에 보관되는지 표시 (배포 앱에서 보관이 꺼져 있으면 재시작 때 기록이 사라짐)
     if remote.enabled():
@@ -381,6 +407,38 @@ with tab_stats:
             df["정답률"] = (df["correct"] / df["total"] * 100).round(0).astype(int).astype(str) + "%"
             df = df.rename(columns={"time": "시간", "label": "범위", "total": "문제", "correct": "맞힘"})
             st.dataframe(df[["시간", "범위", "맞힘", "문제", "정답률"]], hide_index=True, width="stretch")
+
+    # 차트 복기 성적
+    st.markdown("---")
+    st.markdown("**🕯️ 차트 복기 성적**")
+    rs = prog.replay_stats(PROGRESS)
+    if not PROGRESS.get("replays"):
+        st.info("아직 복기한 차트가 없습니다. 복기 탭에서 시작해 보세요.")
+    else:
+        r1, r2 = st.columns(2)
+        r1.metric("매수 판단", f"{rs['buys']}번", help="한 번 판단형에서 매수한 횟수")
+        win_rate = rs["wins"] / rs["buys"] * 100 if rs["buys"] else 0
+        r2.metric("승률", f"{win_rate:.0f}%", help=f"이익으로 끝난 판 {rs['wins']} / {rs['buys']}")
+        r3, r4 = st.columns(2)
+        r3.metric("평균 R", f"{rs['avg_r']:+.2f}R", help=f"합계 {rs['total_r']:+.2f}R (0보다 크면 길게 보면 이익)")
+        r4.metric("관망 성공", f"{rs['good_passes']} / {rs['passes']}", help="관망했는데 샀다면 손해였던 판")
+        if rs["buys"]:
+            st.caption(f"평균 {rs['avg_r']:+.2f}R → {'0보다 커서 길게 보면 이익인 판단' if rs['avg_r'] > 0 else '0 이하라 아직은 손해인 판단'}")
+        if rs["steps"]:
+            st.caption(f"한 봉씩 넘기기 {rs['steps']}판 · 평균 수익률 {rs['step_avg_ret']:+.1f}% · "
+                       f"그냥 보유보다 나았던 판 {rs['step_beat']}번")
+        recent = list(reversed(PROGRESS["replays"]))[: config.RECENT_SESSIONS_SHOWN]
+        rows = []
+        for r in recent:
+            if r.get("mode") == "step":
+                result = f"{r['ret_pct']:+.1f}% (보유 {r['hold_ret_pct']:+.1f}%)"
+                kind = "한 봉씩"
+            elif r.get("decision") == "buy":
+                result, kind = f"{r['r']:+.2f}R ({r['ret_pct']:+.1f}%)", "매수"
+            else:
+                result, kind = f"샀다면 {r['would_r']:+.2f}R", "관망"
+            rows.append({"시간": r["time"], "종목": r.get("name", r.get("symbol", "")), "판단": kind, "결과": result})
+        st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
 
 st.divider()
 st.caption(f"⚠️ {config.DISCLAIMER}")

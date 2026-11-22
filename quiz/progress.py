@@ -3,7 +3,8 @@
 progress.json 모양:
 {
   "questions": {"b01": {"seen": 3, "correct": 2, "wrong": 1, "streak": 2, "last": "2026-11-23 08:10"}},
-  "sessions":  [{"time": "2026-11-23 08:10", "label": "기초 용어", "total": 10, "correct": 8}]
+  "sessions":  [{"time": "2026-11-23 08:10", "label": "기초 용어", "total": 10, "correct": 8}],
+  "replays":   [{"time": "...", "mode": "one", "symbol": "AAPL", "decision": "buy", "r": 1.8, "ret_pct": 5.2, ...}]
 }
 """
 import json
@@ -17,7 +18,7 @@ import config
 
 def empty_progress() -> dict:
     """아직 공부 기록이 없을 때의 빈 기록."""
-    return {"questions": {}, "sessions": []}
+    return {"questions": {}, "sessions": [], "replays": []}
 
 
 def _now() -> str:
@@ -35,6 +36,7 @@ def load_progress(path: Path = config.PROGRESS_FILE) -> tuple[dict, str | None]:
             raise ValueError("형식 오류")
         data.setdefault("questions", {})
         data.setdefault("sessions", [])
+        data.setdefault("replays", [])   # 2단계(차트 복기) 전에 만든 기록에도 칸을 만들어 줌
         return data, None
     except (json.JSONDecodeError, ValueError, OSError):
         return empty_progress(), f"학습 기록 파일({path.name})을 읽지 못해 빈 기록으로 시작합니다."
@@ -107,3 +109,38 @@ def category_stats(progress: dict, questions: list[dict]) -> dict[str, dict]:
     for s in stats.values():
         s["rate"] = s["correct"] / s["answered"] * 100 if s["answered"] else 0.0
     return stats
+
+
+# ── 차트 복기 기록 ─────────────────────────────────────
+def record_replay(progress: dict, item: dict, when: str | None = None) -> dict:
+    """차트 복기 한 판의 결과를 남긴다. item 예:
+    한 번 판단형: {"mode": "one", "symbol", "name", "period", "decision": "buy"/"pass", "r", "ret_pct", "reason", "would_r"}
+    한 봉씩:      {"mode": "step", "symbol", "name", "period", "trades", "win_rate", "ret_pct", "hold_ret_pct"}
+    """
+    progress.setdefault("replays", []).append({"time": when or _now(), **item})
+    return progress
+
+
+def replay_stats(progress: dict) -> dict:
+    """차트 복기 성적 요약.
+
+    - buys: 한 번 판단형에서 매수한 판 수, wins: 그중 이익(R>0), avg_r·total_r: 평균·합계 R
+    - passes: 관망한 판 수, good_passes: 관망했는데 '매수했다면 손해'였던 판 수
+    - steps: 한 봉씩 넘기기 판 수, step_avg_ret: 평균 수익률(%), step_beat: 그냥 보유보다 나았던 판 수
+    """
+    reps = progress.get("replays", [])
+    buys = [r for r in reps if r.get("mode") == "one" and r.get("decision") == "buy"]
+    passes = [r for r in reps if r.get("mode") == "one" and r.get("decision") == "pass"]
+    steps = [r for r in reps if r.get("mode") == "step"]
+    total_r = sum(r["r"] for r in buys)
+    return {
+        "buys": len(buys),
+        "wins": sum(1 for r in buys if r["r"] > 0),
+        "avg_r": total_r / len(buys) if buys else 0.0,
+        "total_r": total_r,
+        "passes": len(passes),
+        "good_passes": sum(1 for r in passes if r.get("would_r", 0) < 0),
+        "steps": len(steps),
+        "step_avg_ret": sum(r["ret_pct"] for r in steps) / len(steps) if steps else 0.0,
+        "step_beat": sum(1 for r in steps if r["ret_pct"] > r.get("hold_ret_pct", 0)),
+    }
