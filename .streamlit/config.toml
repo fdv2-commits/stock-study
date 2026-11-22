@@ -1,0 +1,13 @@
+# Streamlit 화면 설정: 다크 모드 기본
+[theme]
+base = "dark"
+primaryColor = "#3b82f6"
+backgroundColor = "#0e1117"
+secondaryBackgroundColor = "#161b22"
+textColor = "#e6edf3"
+
+[server]
+headless = true
+
+[browser]
+gatherUsageStats = false
