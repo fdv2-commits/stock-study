@@ -13,6 +13,9 @@ QUESTIONS_FILE = CONTENT_DIR / "questions.json"   # 퀴즈 문제 은행
 PROGRESS_FILE = BASE_DIR / "progress.json"        # 내 학습 기록 (git에 올리지 않음)
 
 # ── 화면 문구 ─────────────────────────────────────────
+# 기록 시간 기준 (배포 서버는 UTC라서 한국 시간으로 맞춤)
+TIMEZONE = "Asia/Seoul"
+
 APP_TITLE = "📚 주식 공부"
 DISCLAIMER = "학습용 프로그램입니다. 투자 판단과 책임은 사용자에게 있습니다."
 

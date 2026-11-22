@@ -170,7 +170,6 @@ def start_quiz(mode: str, cats: list, levels: list, count: int):
     st.session_state.quiz_results = []     # 문제별 맞힘(True)/틀림(False)
     st.session_state.quiz_checked = False  # 지금 문제의 정답을 확인했는지
     st.session_state.quiz_run = st.session_state.get("quiz_run", 0) + 1  # 보기 선택 상자 초기화용
-    st.session_state.quiz_saved = False    # 퀴즈 기록을 저장했는지
 
 
 def check_answer(prepared: dict, radio_key: str):
@@ -186,9 +185,18 @@ def check_answer(prepared: dict, radio_key: str):
 
 
 def next_question():
-    """'다음 문제' 버튼."""
+    """'다음 문제' / '결과 보기' 버튼.
+
+    마지막 문제였다면 여기서 퀴즈 기록을 한 번만 남긴다.
+    (화면 그리는 코드에서 저장하면, 저장 도중 화면이 다시 그려질 때 두 번 저장될 수 있음)
+    """
     st.session_state.quiz_idx += 1
     st.session_state.quiz_checked = False
+    if st.session_state.quiz_idx == len(st.session_state.quiz):
+        correct, total, _ = engine.score(st.session_state.quiz_results)
+        prog.record_session(PROGRESS, st.session_state.quiz_label, total, correct)
+        save()
+        sync(f"퀴즈 완료 {correct}/{total}")
 
 
 def quit_quiz():
@@ -280,11 +288,6 @@ with tab_quiz:
         # 결과 화면
         results = st.session_state.quiz_results
         correct, total, rate = engine.score(results)
-        if not st.session_state.quiz_saved:
-            prog.record_session(PROGRESS, st.session_state.quiz_label, total, correct)
-            save()
-            sync(f"퀴즈 완료 {correct}/{total}")
-            st.session_state.quiz_saved = True
         level = prog.accuracy_level(rate)
         st.markdown(f"### {LEVEL_EMOJI[level]} {correct} / {total} 맞힘 ({rate:.0f}%)")
         st.caption(f"정답률 {rate:.0f}% → {COLOR_RULE}")
@@ -326,6 +329,11 @@ with tab_wrong:
 
 # ── 4) 학습 기록 ─────────────────────────────────────
 with tab_stats:
+    # 기록이 어디에 보관되는지 표시 (배포 앱에서 보관이 꺼져 있으면 재시작 때 기록이 사라짐)
+    if remote.enabled():
+        st.caption(f"☁️ 기록 보관: GitHub 켜짐 ({config.REMOTE_DIR}/{config.PROGRESS_FILE.name})")
+    else:
+        st.caption("💾 기록 보관: 이 기기에만 저장 (GitHub 보관 꺼짐 — 배포 앱이라면 Secrets 확인)")
     qstats = PROGRESS["questions"]
     answered = sum(s.get("seen", 0) for s in qstats.values())
     correct_all = sum(s.get("correct", 0) for s in qstats.values())

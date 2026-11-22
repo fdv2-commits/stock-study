@@ -10,6 +10,7 @@ import json
 import os
 from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import config
 
@@ -20,7 +21,8 @@ def empty_progress() -> dict:
 
 
 def _now() -> str:
-    return datetime.now().strftime("%Y-%m-%d %H:%M")
+    """지금 시각 (config.TIMEZONE 기준, 기본 한국 시간)."""
+    return datetime.now(ZoneInfo(config.TIMEZONE)).strftime("%Y-%m-%d %H:%M")
 
 
 def load_progress(path: Path = config.PROGRESS_FILE) -> tuple[dict, str | None]:
