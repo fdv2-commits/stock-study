@@ -32,6 +32,7 @@
 - content/: 개념 카드(concepts.json)와 퀴즈 문제 은행(questions.json)
 - quiz/: 문제 불러오기·검사, 퀴즈 출제·채점, 학습 기록 저장
 - data/: 일봉 시세 / indicators/: 지표 / replay/: 차트 복기 계산·차트 / ui_replay.py: 복기 탭 화면
+- backtest/: 전략 신호·백테스트 계산 / ui_backtest.py: 전략 탭 화면
 - storage/: 비밀값 읽기, 배포용 GitHub 보관 (학습 기록을 swing-data 저장소의 stock_study/ 폴더에 보관)
 - tests/: pytest 테스트
 

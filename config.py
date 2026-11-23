@@ -112,6 +112,42 @@ COLOR_RSI = "#38bdf8"        # RSI 선 (하늘)
 COLOR_GUIDE = "#475569"      # RSI 30·70 기준선
 COLOR_REVEAL = "#94a3b8"     # 판단 후 공개 구간 표시
 
+# ── 전략 백테스트 ─────────────────────────────────────
+BT_YEARS_OPTIONS = [3, 5, 10]    # 테스트 기간(년) 선택지 (REPLAY_DATA_YEARS 이하)
+BT_DEFAULT_YEARS = 5
+
+# 공통 매도 규칙 기본값 (화면에서 조절 가능)
+BT_STOP_ATR_MULT = 2.0           # 손절 = 매수가 − ATR × 이 값
+BT_TARGET_R = 2.0                # 목표 = 매수가 + 손절폭 × 이 값
+BT_MAX_HOLD_DAYS = 20            # 최대 보유 거래일 (스윙 3~20일)
+BT_MAX_HOLD_RANGE = (3, 60)
+BT_STOP_MULT_RANGE = (1.0, 4.0, 0.5)   # 화면 슬라이더 (최소, 최대, 간격)
+BT_TARGET_R_RANGE = (1.0, 4.0, 0.5)
+
+# 전략별 숫자 기본값
+BT_PULLBACK_RSI_LOW = RSI_PULLBACK_LOW
+BT_PULLBACK_RSI_HIGH = RSI_PULLBACK_HIGH
+BT_BREAKOUT_DAYS = 20            # 최근 며칠 최고가를 넘으면 돌파
+BT_BREAKOUT_VOL_MULT = 1.5       # 거래량이 20일 평균의 몇 배 이상이어야 하는지
+BT_OVERSOLD_LEVEL = RSI_OVERSOLD # RSI가 이 값을 아래에서 위로 넘으면 반등 신호
+
+# 거래 비용: 한 번 사고팔 때(왕복) 빠지는 비율(%) = 수수료 + 세금 + 체결 차이(슬리피지)
+# 대략값입니다. 내 증권사 수수료·현재 세율에 맞게 고쳐 쓰세요.
+BT_COST_PCT = {"KR": 0.30, "US": 0.30}
+
+# 내 자금 기준 시뮬레이션 (CLAUDE.md의 내 설정)
+BT_CAPITAL = 3_000_000           # 총 투자금(원)
+BT_RISK_PCT = 1.0                # 1회 최대 손실(총자금 대비 %)
+BT_MAX_WEIGHT_PCT = 25.0         # 종목당 최대 비중(%)
+
+# 결과 색 기준
+BT_GOOD_AVG_R = 0.2              # 평균 R이 이 값 이상이면 초록, 0 초과면 노랑, 그 이하 빨강
+BT_MIN_TRADES = 30               # 거래 수가 이보다 적으면 '우연일 수 있음' 경고
+BT_TRADES_SHOWN = 30             # 거래 목록에 보여줄 최근 거래 수
+COLOR_EQUITY = "#38bdf8"         # 자금 곡선 색
+BT_EQUITY_CHART_HEIGHT = 260
+BT_PRICE_CHART_HEIGHT = 300
+
 # ── 배포용 GitHub 보관 (학습 기록) ─────────────────────
 # Streamlit Cloud는 재시작하면 폴더의 파일이 사라지므로 학습 기록을 비공개 GitHub 저장소에 보관한다.
 # 토큰·저장소 이름은 st.secrets(배포) 또는 .env(로컬)의 GITHUB_DATA_TOKEN / GITHUB_DATA_REPO.

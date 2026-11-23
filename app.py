@@ -1,4 +1,4 @@
-"""주식 공부 프로그램 화면 (개념 카드 + 퀴즈 + 오답 노트 + 차트 복기 + 학습 기록).
+"""주식 공부 프로그램 화면 (개념 카드 + 퀴즈 + 오답 노트 + 차트 복기 + 전략 백테스트 + 학습 기록).
 
 실행: .venv\\Scripts\\streamlit run app.py
 """
@@ -12,6 +12,7 @@ import config
 from quiz import bank, engine, progress as prog
 from storage import remote
 from storage.keys import get_secret
+import ui_backtest
 import ui_replay
 
 st.set_page_config(page_title="주식 공부", page_icon="📚", layout="centered")
@@ -129,8 +130,8 @@ if st.session_state.get("progress_warning"):
 if remote.last_error:
     st.warning(f"학습 기록 GitHub 보관 실패 (이 기기에는 저장됨): {remote.last_error}")
 
-tab_concept, tab_quiz, tab_wrong, tab_replay, tab_stats = st.tabs(
-    ["📖 개념", "📝 퀴즈", "❌ 오답", "🕯️ 복기", "📊 기록"])
+tab_concept, tab_quiz, tab_wrong, tab_replay, tab_bt, tab_stats = st.tabs(
+    ["개념", "퀴즈", "오답", "복기", "전략", "기록"])   # 휴대폰 한 줄에 다 보이도록 짧게
 
 
 # ── 1) 개념 카드 ──────────────────────────────────────
@@ -353,7 +354,12 @@ with tab_replay:
     ui_replay.render(PROGRESS, save, sync)
 
 
-# ── 5) 학습 기록 ─────────────────────────────────────
+# ── 5) 전략 백테스트 ──────────────────────────────────
+with tab_bt:
+    ui_backtest.render()
+
+
+# ── 6) 학습 기록 ─────────────────────────────────────
 with tab_stats:
     # 기록이 어디에 보관되는지 표시 (배포 앱에서 보관이 꺼져 있으면 재시작 때 기록이 사라짐)
     if remote.enabled():
